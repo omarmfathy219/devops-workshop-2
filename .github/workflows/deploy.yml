@@ -62,7 +62,7 @@ jobs:
       # 6. Run Terraform to deploy the infrastructure
       - name: Terraform Apply
         id: terraform
-        working-directory: ./terraform
+        working-directory: ./terrafrom
         run: |
           terraform init
           # Apply the Terraform plan, passing the image tag as a variable
