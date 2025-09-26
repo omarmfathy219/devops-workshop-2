@@ -47,7 +47,7 @@ def hello_world():
     <body>
         <div>
             <h1>Success!</h1>
-            <p>Hello From DevOps Workshop.</p>
+            <p>This my updated version ❤️.</p>
         </div>
         <div class="version">
             Version 1.0
