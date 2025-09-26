@@ -6,7 +6,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "tf-state-file-26-9"
+    bucket         = "tf-state-file-20-6"
     key            = "devops-workshop/terraform.tfstate"
     region         = "us-east-2"
   }
