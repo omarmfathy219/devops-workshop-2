@@ -1,0 +1,69 @@
+name: Deploy to AWS ECS
+
+# Run on pushes to the main branch
+on:
+  push:
+    branches:
+      - main
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Set default region and ECR repo name
+env:
+  AWS_REGION: "us-east-2"
+  ECR_REPOSITORY: "devops-workshop-app"
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # 2. Configure AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 3. Log in to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # 4. Build, tag, and push image to Amazon ECR
+      - name: Build and Push Docker Image
+        id: build-image
+        env:
+          # Use the ECR registry address and the repo name
+          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          # Use the Git commit SHA for a unique image tag
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build and push the image
+          docker build -t $IMAGE_URI:$IMAGE_TAG ./app
+          docker push $IMAGE_URI:$IMAGE_TAG
+          # Also create a 'latest' tag for convenience
+          docker tag $IMAGE_URI:$IMAGE_TAG $IMAGE_URI:latest
+          docker push $IMAGE_URI:latest
+          # Make the image tag available to other steps
+          echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+
+      # 5. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      # 6. Run Terraform to deploy the infrastructure
+      - name: Terraform Apply
+        id: terraform
+        working-directory: ./terraform
+        run: |
+          terraform init
+          # Apply the Terraform plan, passing the image tag as a variable
+          terraform apply -auto-approve -var="image_tag=${{ steps.build-image.outputs.image_tag }}" 
